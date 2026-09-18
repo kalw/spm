@@ -35,13 +35,13 @@ Then `spm add` prints the exact mise `[tools]` snippet for your storage type.
 GitHub Releases and puts `spm` on your `PATH`:
 
 ```bash
-mise use -g github:kalw/spm@0.1.3
+mise use -g github:kalw/spm@0.1.4
 ```
 
 **Prebuilt binary** (pick your OS/arch from the table above):
 
 ```bash
-VERSION=v0.1.3
+VERSION=v0.1.4
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')   # linux, darwin, freebsd, openbsd
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 curl -fsSL "https://github.com/kalw/spm/releases/download/${VERSION}/spm-${OS}-${ARCH}.tar.gz" \
