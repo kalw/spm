@@ -30,12 +30,14 @@ jobs:
           mkdir -p dist
           for os in linux darwin freebsd openbsd; do
             for arch in amd64 arm64; do
-              out="spm-${os}-${arch}"
+              # Archive is named per-platform; the binary inside is always
+              # "spm" so `mise use github:kalw/spm` and manual extraction both
+              # yield a plain `spm` on PATH.
               GOOS="$os" GOARCH="$arch" go build -trimpath \
                 -ldflags "-s -w -X main.version=${VERSION}" \
-                -o "${out}" ./cmd/spm
-              tar -czf "dist/${out}.tar.gz" "${out}"
-              rm -f "${out}"
+                -o spm ./cmd/spm
+              tar -czf "dist/spm-${os}-${arch}.tar.gz" spm
+              rm -f spm
             done
           done
           cd dist && sha256sum *.tar.gz > SHA256SUMS

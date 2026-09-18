@@ -31,14 +31,21 @@ Then `spm add` prints the exact mise `[tools]` snippet for your storage type.
 
 ## Install
 
+**With mise** (recommended) — picks the right binary for your OS/arch from
+GitHub Releases and puts `spm` on your `PATH`:
+
+```bash
+mise use -g github:kalw/spm@latest
+```
+
 **Prebuilt binary** (pick your OS/arch from the table above):
 
 ```bash
-VERSION=v0.1.0
+VERSION=v0.1.1
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')   # linux, darwin, freebsd, openbsd
 ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 curl -fsSL "https://github.com/kalw/spm/releases/download/${VERSION}/spm-${OS}-${ARCH}.tar.gz" \
-  | tar -xz && sudo mv "spm-${OS}-${ARCH}" /usr/local/bin/spm
+  | tar -xz && sudo install spm /usr/local/bin/spm
 spm version
 ```
 

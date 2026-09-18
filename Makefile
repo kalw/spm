@@ -66,8 +66,16 @@ cross: ## Cross-compile all platforms into $(DIST)/
 	done
 
 .PHONY: dist
-dist: cross ## Cross-compile, tar.gz each target, and write SHA256SUMS
-	@cd $(DIST) && for f in $(BIN)-*; do tar -czf "$$f.tar.gz" "$$f" && rm -f "$$f"; done
+dist: ## Cross-compile, tar.gz each target (inner binary named spm), write SHA256SUMS
+	@mkdir -p $(DIST)
+	@for p in $(PLATFORMS); do \
+	  os=$${p%/*}; arch=$${p#*/}; \
+	  echo "packaging $(DIST)/$(BIN)-$$os-$$arch.tar.gz"; \
+	  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch \
+	    go build -trimpath -ldflags "$(LDFLAGS)" -o "$(DIST)/$(BIN)" $(PKG) || exit 1; \
+	  tar -czf "$(DIST)/$(BIN)-$$os-$$arch.tar.gz" -C $(DIST) $(BIN); \
+	  rm -f "$(DIST)/$(BIN)"; \
+	done
 	@cd $(DIST) && (sha256sum *.tar.gz 2>/dev/null || shasum -a 256 *.tar.gz) > SHA256SUMS
 	@echo "artifacts in $(DIST)/:" && ls -1 $(DIST)
 
