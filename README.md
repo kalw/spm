@@ -113,18 +113,34 @@ Two things happen:
    Non-shell binaries are left untouched; disable injection with `preflight = false`.
 
 2. **Auto-wiring** — `spm add` reads the package's published metadata sidecar and
-   appends the dependencies as mise tool blocks, so a single `mise install`
-   brings the tool and everything it needs:
+   appends the dependencies as mise tool blocks, using mise's native
+   [`depends`](https://mise.jdx.dev/dev-tools/#tool-dependencies) field for
+   install ordering, so a single `mise install` brings the tool and everything
+   it needs:
 
    ```toml
    [tools."http:deploy-tools"]
    version = "1.4.2"
    ...
+   depends = ["jq"]
+
    [tools."jq"]
    version = "1.7"
    ```
 
    Pass `--no-deps` to emit only the package itself.
+
+### Why not rely on mise's `depends` alone?
+
+mise's [tool dependencies](https://mise.jdx.dev/dev-tools/#tool-dependencies)
+only control **install ordering** — per mise, *"dependency declarations do not
+add tools to the configuration or install them automatically"*, and author-side
+declaration exists only for vfox plugins. spm packages are plain archives on the
+`http:`/`s3:` backends, so the dependency list has to travel out-of-band (the
+sidecar) and be materialized into the consumer's config by `spm add`. spm then
+emits `depends` on top of that to get mise's native ordering. The preflight is
+the runtime backstop for installs that bypass `spm add` (e.g. a raw binary
+download) — disable it with `preflight = false` if you rely solely on mise.
 
 ## Configure remotes
 

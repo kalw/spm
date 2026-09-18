@@ -58,8 +58,10 @@ func cmdAdd(args []string) error {
 	if !*noDeps {
 		if deps, derr := resolveDeps(remote, pkg, version); derr != nil {
 			fmt.Fprintf(os.Stderr, "spm: could not resolve dependencies for %s: %v\n", pkg, derr)
-		} else if blocks := miseconf.DepBlocks(deps); blocks != "" {
-			snippet += blocks
+		} else if len(deps) > 0 {
+			// `depends` (native mise ordering) goes inside the package's own
+			// tool block; the deps then follow as their own [tools] entries.
+			snippet += miseconf.DependsLine(deps) + miseconf.DepBlocks(deps)
 		}
 	}
 

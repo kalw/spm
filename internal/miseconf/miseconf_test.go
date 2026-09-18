@@ -104,3 +104,13 @@ func TestDepBlocks(t *testing.T) {
 		t.Fatal("no deps should render empty")
 	}
 }
+
+func TestDependsLine(t *testing.T) {
+	deps := []manifest.Dep{{Mise: "jq", Version: "1.7"}, {Mise: "npm:cowsay"}}
+	if got := DependsLine(deps); got != "depends = [\"jq\", \"npm:cowsay\"]\n" {
+		t.Fatalf("DependsLine = %q", got)
+	}
+	if DependsLine(nil) != "" {
+		t.Fatal("no deps should render empty depends")
+	}
+}

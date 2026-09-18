@@ -32,6 +32,22 @@ func Snippet(r config.Remote, pkg, version string) (string, error) {
 	}
 }
 
+// DependsLine renders mise's native `depends` field for a package's tool block,
+// so mise installs the dependencies first and exposes them on PATH during the
+// tool's install hooks. Returns "" for no deps. The deps must also appear as
+// their own [tools] entries (see DepBlocks) — mise's depends only orders,
+// it does not add or install them.
+func DependsLine(deps []manifest.Dep) string {
+	if len(deps) == 0 {
+		return ""
+	}
+	refs := make([]string, len(deps))
+	for i, d := range deps {
+		refs[i] = fmt.Sprintf("%q", d.Mise)
+	}
+	return fmt.Sprintf("depends = [%s]\n", strings.Join(refs, ", "))
+}
+
 // DepBlocks renders the mise [tools] entries for a package's dependencies,
 // each a plain tool ref that mise resolves on its own. Returns "" for no deps.
 func DepBlocks(deps []manifest.Dep) string {
