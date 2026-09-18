@@ -35,7 +35,7 @@ Then `spm add` prints the exact mise `[tools]` snippet for your storage type.
 GitHub Releases and puts `spm` on your `PATH`:
 
 ```bash
-mise use -g github:kalw/spm@latest
+mise use -g github:kalw/spm@0.1.1
 ```
 
 **Prebuilt binary** (pick your OS/arch from the table above):

@@ -46,3 +46,36 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+  # Rewrite the pinned install version in the README to this tag and commit it
+  # back to the default branch, so the docs advertise a concrete version (never
+  # a "latest" ref) and stay in sync with releases automatically.
+  bump-docs:
+    name: bump docs version
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: pin install version to ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"     # e.g. v0.1.2
+          VER="${TAG#v}"               # e.g. 0.1.2  (mise pins without the leading v)
+          # mise one-liner: github:kalw/spm@<VER>
+          sed -i -E "s#(github:kalw/spm@)[0-9A-Za-z._-]+#\1${VER}#g" README.md
+          # prebuilt curl block: VERSION=v<...>
+          sed -i -E "s#^VERSION=v[0-9A-Za-z._-]+#VERSION=${TAG}#g" README.md
+      - name: commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- README.md; then
+            echo "README already up to date for ${GITHUB_REF_NAME}"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: pin install to ${GITHUB_REF_NAME} [skip ci]"
+          git push origin main
