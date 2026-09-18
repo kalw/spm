@@ -151,6 +151,29 @@ Because `version_order = "semver"`, consumers can pin an exact version or track 
 ## Development
 
 ```bash
-go build ./...
-go test ./...
+make build          # build ./spm
+make check          # go vet + unit tests
+make cross          # cross-compile every platform into dist/
+make dist           # cross-compile + tar.gz + SHA256SUMS
+make help           # list all targets
 ```
+
+### Integration tests
+
+The S3 adapter (which also powers the GCS S3-interop path) is covered by
+MinIO-backed integration tests, guarded by the `integration` build tag so the
+default `go test` stays fast and offline. With Docker available:
+
+```bash
+make integration    # starts MinIO, runs the tagged tests, tears MinIO down
+```
+
+Or point the tests at any existing S3-compatible endpoint:
+
+```bash
+AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... \
+SPM_IT_S3_ENDPOINT=https://minio.example.com SPM_IT_S3_BUCKET=spm-it \
+go test -tags integration -count=1 ./internal/storage/...
+```
+
+They are skipped automatically when `SPM_IT_S3_ENDPOINT` is unset.

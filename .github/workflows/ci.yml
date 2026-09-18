@@ -24,6 +24,18 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+  integration:
+    name: integration (minio)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: MinIO-backed integration tests
+        run: make integration
+
   build:
     name: build ${{ matrix.goos }}/${{ matrix.goarch }}
     needs: test
