@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: "1.27"
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: cross-compile and archive
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          mkdir -p dist
+          for os in linux darwin freebsd openbsd; do
+            for arch in amd64 arm64; do
+              out="spm-${os}-${arch}"
+              GOOS="$os" GOARCH="$arch" go build -trimpath \
+                -ldflags "-s -w -X main.version=${VERSION}" \
+                -o "${out}" ./cmd/spm
+              tar -czf "dist/${out}.tar.gz" "${out}"
+              rm -f "${out}"
+            done
+          done
+          cd dist && sha256sum *.tar.gz > SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

@@ -1,0 +1,11 @@
+name = "deploy-tools"
+version = "1.4.2"
+description = "Deployment helper scripts"
+
+[[bin]]
+name = "deploy"
+path = "src/deploy.sh"
+
+[[bin]]
+name = "rollback"
+path = "src/rollback.sh"

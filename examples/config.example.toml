@@ -1,0 +1,24 @@
+# Copy to ~/.config/spm/config.toml (or point $SPM_CONFIG at it).
+# Secrets are NEVER stored here — see the README for the env vars each type uses.
+
+[remotes.prod-s3]
+type = "s3"
+bucket = "acme-artifacts"
+prefix = "spm"
+region = "us-east-1"
+# endpoint = "https://minio.internal:9000"   # for MinIO / S3-compatible
+
+[remotes.prod-gcs]
+type = "gcs"
+bucket = "acme-artifacts"
+prefix = "spm"
+access = "interop"                             # "interop" (HMAC) or "native" (ADC)
+public_base_url = "https://storage.googleapis.com/acme-artifacts/spm"
+
+[remotes.prod-http]
+type = "http"
+prefix = "spm"
+publish = "webdav"                             # "webdav" or "local"
+publish_url = "https://nexus.acme.com/repository/spm"
+# publish_dir = "/var/www/spm"                 # when publish = "local"
+download_base_url = "https://dl.acme.com/spm"
