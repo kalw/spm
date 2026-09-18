@@ -77,5 +77,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "docs: pin install to ${GITHUB_REF_NAME} [skip ci]"
+          # No [skip ci]: this commit is pushed with GITHUB_TOKEN (which already
+          # does not trigger workflows), and a [skip ci] here would also skip the
+          # Release when a future tag points at this commit.
+          git commit -m "docs: pin install to ${GITHUB_REF_NAME}"
           git push origin main
