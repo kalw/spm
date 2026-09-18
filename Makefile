@@ -9,6 +9,8 @@ PLATFORMS  := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 \
               freebsd/amd64 freebsd/arm64 openbsd/amd64 openbsd/arm64
 
 # MinIO settings for `make integration`.
+# quay.io is used (not Docker Hub) so CI runners can pull anonymously.
+MINIO_IMAGE  ?= quay.io/minio/minio
 MINIO_NAME   := spm-minio
 MINIO_PORT   := 9000
 MINIO_USER   := minioadmin
@@ -81,7 +83,7 @@ clean: ## Remove build artifacts
 minio-up: ## Start a local MinIO container
 	@docker run -d --rm --name $(MINIO_NAME) -p $(MINIO_PORT):9000 \
 	  -e MINIO_ROOT_USER=$(MINIO_USER) -e MINIO_ROOT_PASSWORD=$(MINIO_PASS) \
-	  minio/minio server /data >/dev/null
+	  $(MINIO_IMAGE) server /data >/dev/null
 	@echo -n "waiting for MinIO"; \
 	for i in $$(seq 1 30); do \
 	  curl -fs http://127.0.0.1:$(MINIO_PORT)/minio/health/ready >/dev/null 2>&1 && { echo " ready"; break; }; \
