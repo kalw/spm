@@ -9,3 +9,12 @@ path = "src/deploy.sh"
 [[bin]]
 name = "rollback"
 path = "src/rollback.sh"
+
+# These scripts shell out to jq and curl; declare them so consumers get them
+# via mise and the injected preflight fails fast with a clear message.
+[[deps]]
+mise = "jq"
+version = "1.7"
+
+[[deps]]
+mise = "curl"

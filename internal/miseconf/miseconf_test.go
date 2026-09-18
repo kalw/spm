@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kalw/spm/internal/config"
+	"github.com/kalw/spm/internal/manifest"
 )
 
 func TestHTTPSnippet(t *testing.T) {
@@ -86,5 +87,20 @@ func TestGCSNativeSnippetUsesHTTP(t *testing.T) {
 	}
 	if !strings.Contains(got, `[tools."http:deploy-tools"]`) {
 		t.Fatalf("gcs native should use http backend:\n%s", got)
+	}
+}
+
+func TestDepBlocks(t *testing.T) {
+	deps := []manifest.Dep{
+		{Mise: "jq", Version: "1.7"},
+		{Mise: "npm:cowsay"},
+	}
+	got := DepBlocks(deps)
+	want := "\n[tools.\"jq\"]\nversion = \"1.7\"\n\n[tools.\"npm:cowsay\"]\nversion = \"latest\"\n"
+	if got != want {
+		t.Fatalf("DepBlocks got:\n%q\nwant:\n%q", got, want)
+	}
+	if DepBlocks(nil) != "" {
+		t.Fatal("no deps should render empty")
 	}
 }

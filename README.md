@@ -87,6 +87,45 @@ Each `[[bin]]` is copied to `bin/<name>` (mode 0755) inside the tarball, so mise
 auto-expose them on `PATH`. Builds are reproducible (sorted entries, zeroed mtimes) — the same
 inputs always yield the same sha256.
 
+## Dependencies
+
+Scripts often need other tools (jq, curl, another CLI). Declare them as **mise
+tool refs** — spm leaves resolution to mise:
+
+```toml
+[[deps]]
+mise = "jq"        # registry name, or a backend ref like "npm:cowsay"
+version = "1.7"    # optional; defaults to "latest"
+bin = "jq"         # optional; command checked at preflight (derived from mise if omitted)
+```
+
+Two things happen:
+
+1. **Preflight** — at package time, a small POSIX-sh check is injected after the
+   shebang of each shell script. At runtime it resolves each dep via mise
+   (`mise which`, falling back to `PATH`) and, if missing, exits with an
+   actionable hint:
+
+   ```
+   spm: missing dependency: jq (install with: mise use jq@1.7)
+   ```
+
+   Non-shell binaries are left untouched; disable injection with `preflight = false`.
+
+2. **Auto-wiring** — `spm add` reads the package's published metadata sidecar and
+   appends the dependencies as mise tool blocks, so a single `mise install`
+   brings the tool and everything it needs:
+
+   ```toml
+   [tools."http:deploy-tools"]
+   version = "1.4.2"
+   ...
+   [tools."jq"]
+   version = "1.7"
+   ```
+
+   Pass `--no-deps` to emit only the package itself.
+
 ## Configure remotes
 
 Remotes live in `~/.config/spm/config.toml` (override with `$SPM_CONFIG`). **Secrets are never

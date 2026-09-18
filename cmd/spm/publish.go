@@ -7,6 +7,7 @@ import (
 
 	"github.com/kalw/spm/internal/archive"
 	"github.com/kalw/spm/internal/config"
+	"github.com/kalw/spm/internal/meta"
 	"github.com/kalw/spm/internal/storage"
 	"github.com/kalw/spm/internal/versions"
 )
@@ -86,6 +87,17 @@ func cmdPublish(args []string) error {
 	if err := store.Put(ctx, tarKey+".sha256", sumBody, "text/plain"); err != nil {
 		return err
 	}
+
+	// Metadata sidecar: lets consumers discover this version's deps without
+	// downloading the tarball.
+	metaBody, err := meta.Encode(meta.Meta{Name: m.Name, Version: m.Version, Deps: m.Deps})
+	if err != nil {
+		return err
+	}
+	if err := store.Put(ctx, remote.Key(m.Name, meta.FileName(m.Name, m.Version)), metaBody, "application/json"); err != nil {
+		return err
+	}
+
 	if err := store.Put(ctx, versKey, versJSON, "application/json"); err != nil {
 		return err
 	}

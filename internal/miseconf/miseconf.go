@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/kalw/spm/internal/config"
+	"github.com/kalw/spm/internal/manifest"
 )
 
 // Snippet returns the mise.toml [tools] block for installing pkg at version
@@ -29,6 +30,17 @@ func Snippet(r config.Remote, pkg, version string) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported remote type %q", r.Type)
 	}
+}
+
+// DepBlocks renders the mise [tools] entries for a package's dependencies,
+// each a plain tool ref that mise resolves on its own. Returns "" for no deps.
+func DepBlocks(deps []manifest.Dep) string {
+	var b strings.Builder
+	for _, d := range deps {
+		fmt.Fprintf(&b, "\n[tools.%q]\n", d.Mise)
+		fmt.Fprintf(&b, "version = %q\n", d.EffectiveVersion())
+	}
+	return b.String()
 }
 
 func httpSnippet(base, pkg, version string) string {

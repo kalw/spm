@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/kalw/spm/internal/manifest"
@@ -35,6 +36,7 @@ func Build(dir string, m *manifest.Manifest, out io.Writer) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("reading bin %q: %w", b.Name, err)
 		}
+		data = injectPreflight(data, m)
 		entries = append(entries, entry{name: "bin/" + b.Name, data: data})
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].name < entries[j].name })
@@ -86,4 +88,54 @@ func BuildBytes(dir string, m *manifest.Manifest) ([]byte, string, error) {
 // matching the `sha256sum` format that mise's checksum_url understands.
 func ChecksumFile(sum, artifact string) string {
 	return fmt.Sprintf("%s  %s\n", sum, artifact)
+}
+
+// injectPreflight inserts a dependency-check prologue after the shebang of a
+// shell script when the manifest declares deps and preflight is enabled. It is
+// a no-op for scripts without a shell shebang, keeping non-shell bins untouched.
+// The output is deterministic, so archive reproducibility is preserved.
+func injectPreflight(data []byte, m *manifest.Manifest) []byte {
+	if !m.PreflightEnabled() || len(m.Deps) == 0 {
+		return data
+	}
+	nl := bytes.IndexByte(data, '\n')
+	if nl < 0 {
+		return data
+	}
+	first := data[:nl]
+	if !bytes.HasPrefix(first, []byte("#!")) || !bytes.Contains(first, []byte("sh")) {
+		return data
+	}
+	block := preflightBlock(m.Deps)
+	out := make([]byte, 0, len(data)+len(block)+1)
+	out = append(out, first...)
+	out = append(out, '\n')
+	out = append(out, block...)
+	out = append(out, data[nl+1:]...)
+	return out
+}
+
+// preflightBlock renders the POSIX-sh dependency check. It resolves each
+// dependency via mise (`mise which`), falling back to PATH, and prints an
+// actionable `mise use` hint when a dependency is missing.
+func preflightBlock(deps []manifest.Dep) []byte {
+	var b bytes.Buffer
+	b.WriteString("# >>> spm preflight (auto-generated; do not edit) >>>\n")
+	b.WriteString("__spm_require() {\n")
+	b.WriteString("  command -v \"$1\" >/dev/null 2>&1 && return 0\n")
+	b.WriteString("  command -v mise >/dev/null 2>&1 && mise which \"$1\" >/dev/null 2>&1 && return 0\n")
+	b.WriteString("  printf 'spm: missing dependency: %s (install with: mise use %s)\\n' \"$1\" \"$2\" >&2\n")
+	b.WriteString("  return 1\n")
+	b.WriteString("}\n")
+	for _, d := range deps {
+		fmt.Fprintf(&b, "__spm_require %s %s || exit 1\n", shellSingleQuote(d.EffectiveBin()), shellSingleQuote(d.MiseRef()))
+	}
+	b.WriteString("unset -f __spm_require\n")
+	b.WriteString("# <<< spm preflight <<<\n")
+	return b.Bytes()
+}
+
+// shellSingleQuote wraps s in single quotes, safe for POSIX sh.
+func shellSingleQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }

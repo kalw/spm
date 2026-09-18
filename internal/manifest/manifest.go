@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/semver/v3"
@@ -22,12 +23,60 @@ type Bin struct {
 	Path string `toml:"path"`
 }
 
+// Dep is a runtime dependency provided by mise. It is emitted into the
+// consumer's mise.toml by `spm add` and checked by the injected preflight.
+type Dep struct {
+	Mise    string `toml:"mise" json:"mise"`       // mise tool ref, e.g. "jq" or "npm:cowsay"
+	Version string `toml:"version" json:"version"` // optional; defaults to "latest"
+	Bin     string `toml:"bin" json:"bin"`         // optional; command checked at preflight
+}
+
 // Manifest is the parsed contents of spm.toml.
 type Manifest struct {
 	Name        string `toml:"name"`
 	Version     string `toml:"version"`
 	Description string `toml:"description"`
 	Bin         []Bin  `toml:"bin"`
+	Deps        []Dep  `toml:"deps"`
+	// Preflight controls whether a dependency check is injected into shell
+	// scripts at package time. Nil means enabled (the default when deps exist).
+	Preflight *bool `toml:"preflight"`
+}
+
+// PreflightEnabled reports whether preflight injection should happen.
+func (m *Manifest) PreflightEnabled() bool { return m.Preflight == nil || *m.Preflight }
+
+// EffectiveVersion returns the dep's version, defaulting to "latest".
+func (d Dep) EffectiveVersion() string {
+	if d.Version == "" {
+		return "latest"
+	}
+	return d.Version
+}
+
+// EffectiveBin returns the command the preflight checks for, deriving it from
+// the mise ref when not set explicitly (strips the backend prefix and any path).
+func (d Dep) EffectiveBin() string {
+	if d.Bin != "" {
+		return d.Bin
+	}
+	s := d.Mise
+	if i := strings.LastIndex(s, ":"); i >= 0 {
+		s = s[i+1:]
+	}
+	if i := strings.LastIndex(s, "/"); i >= 0 {
+		s = s[i+1:]
+	}
+	return s
+}
+
+// MiseRef returns the ref used in `mise use <ref>` hints, appending the version
+// unless it is "latest".
+func (d Dep) MiseRef() string {
+	if v := d.EffectiveVersion(); v != "latest" {
+		return d.Mise + "@" + v
+	}
+	return d.Mise
 }
 
 // Load reads and validates spm.toml from the given package directory.
@@ -76,6 +125,22 @@ func (m *Manifest) Validate(dir string) error {
 				return fmt.Errorf("bin %q source not found: %s", b.Name, b.Path)
 			}
 		}
+	}
+	depSeen := map[string]bool{}
+	for _, d := range m.Deps {
+		if strings.TrimSpace(d.Mise) == "" {
+			return fmt.Errorf("each [[deps]] needs a mise ref")
+		}
+		if strings.ContainsAny(d.Mise, " \t") {
+			return fmt.Errorf("invalid dep ref %q: must not contain whitespace", d.Mise)
+		}
+		if strings.Contains(d.Mise, "@") {
+			return fmt.Errorf("dep ref %q must not include a version; use a separate version field", d.Mise)
+		}
+		if depSeen[d.Mise] {
+			return fmt.Errorf("duplicate dependency %q", d.Mise)
+		}
+		depSeen[d.Mise] = true
 	}
 	return nil
 }
